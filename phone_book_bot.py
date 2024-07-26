@@ -85,7 +85,7 @@ class AddressBook(UserDict):
             return f"Contact {name} deleted."
         return f"Contact {name} not found."
     
-    def get_upcoming_birthdays(self):
+    def get_upcoming_birthdays(self, book):
         upcoming_birthdays = []
         today = datetime.now().date()
 
@@ -99,8 +99,152 @@ class AddressBook(UserDict):
                     upcoming_birthdays.append({"name": record.name.value, "congratulation_date": birthday_this_year.strftime("%d.%m.%Y")})
         return upcoming_birthdays
 
+def input_error(func):
+    def inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except ValueError as e:
+            return f"Enter the argument for the command: {e}"
+        except KeyError:
+            return "Contact not found."
+        except IndexError:
+            return "Invalid input. Please provide the correct information."
+        except Exception as e:
+            return f"An error occurred: {e}"
 
-# if __name__ == "__main__":
+    return inner
+
+def parse_input(user_input):
+    cmd, *args = user_input.split()
+    cmd = cmd.strip().lower()
+    return cmd, *args
+
+@input_error
+def add_contact(args, book):
+    if len(args) < 2:
+        raise ValueError("name and phone number.")
+    name, phone, *_ = args
+    if name in book.data:
+        record = book.find(name)
+        message = f"Contact with name {name} updated."
+    else:
+        record = Record(name)
+        message = f"Contact with name {name} added."
+    if phone:
+        record.add_phone(phone)
+    book.add_record(record)
+    return message
+
+@input_error
+def change_contact(args, book):
+    if len(args) < 3:
+        raise ValueError("name, old phone number, new phone number.")
+    name, old_phone, new_phone, *_ = args
+    if name not in book:
+        raise KeyError
+    record = book.find(name)
+    record.edit_phone(old_phone, new_phone)
+    return f"Contact with name {name} changed."
+
+@input_error
+def show_phone(args, book):
+    if len(args) < 1:
+        raise ValueError("name.")
+    name = args[0]
+    if name not in book:
+        raise KeyError
+    record = book.find(name)
+    return f"Phones for {name}: {'; '.join(phone.value for phone in record.phones)}"
+
+@input_error
+def show_all(book):
+    if not book:
+        print("No contacts found")
+    for name, record in book.data.items():
+        print(record)
+
+@input_error
+def add_birthday(args, book):
+    # реалізація
+    if len(args) < 2:
+        raise ValueError("name and date of birthday.")
+    name, dob, *_ = args
+    if name in book.data:
+        record = book.data[name]
+    else:
+        record = Record(name)
+    record.add_birthday(dob)
+    book.add_record(record)
+
+    return f"Birthday to contact with name {name} added."
+
+@input_error
+def show_birthday(args, book):
+    # реалізація
+    if len(args) < 1:
+        raise ValueError("name.")
+    name = args[0]
+    if name not in book:
+        raise KeyError
+    record = book.find(name)
+    return f"Birthday for {name}: {record.birthday}"
+
+@input_error
+def birthdays(book):
+    # реалізація
+    return book.get_upcoming_birthdays(book)
+
+@input_error
+def help():
+    print("\thello - start dialog")
+    print("\tadd <name> <phone> - add contact, require name and phone")
+    print("\tchange <name> <old phone> <new phone> - change contact, require name, old phone and new phone")
+    print("\tphone <name> - show phone, require name")
+    print("\tall - show all contacts")
+    print("\tadd-birthday <name> <date of birthday> - add birthday, require name and date of birthday")
+    print("\tshow-birthday <name> - show birthday, require name")
+    print("\tbirthdays - show birthdays next week")
+    print("\texit or close - exit")
+
+def main():
+    book = AddressBook()
+    print("Welcome to the assistant bot!")
+    while True:
+        user_input = input("Enter a command: ")
+        command, *args = parse_input(user_input)
+
+        if command in ["close", "exit"]:
+            print("Good bye!")
+            break
+        elif command == "hello":
+            print("How can I help you?")
+        elif command == "add":
+            print(add_contact(args, book))
+        elif command == "change":
+            print(change_contact(args, book))
+        elif command == "phone":
+            print(show_phone(args, book))
+        elif command == "all":
+            print(show_all(book))
+        elif command == "add-birthday":
+            # реалізація
+            print(add_birthday(args, book))
+        elif command == "show-birthday":
+            # реалізація
+            print(show_birthday(args, book))
+        elif command == "birthdays":
+            # реалізація
+            print(birthdays(book))
+        elif command == "help" or "-h":
+            help()
+        else:
+            print("Invalid command.")
+        
+
+if __name__ == "__main__":
+    main()
+
+#     # Приклад використання класів
 #     # Створення нової адресної книги
 #     book = AddressBook()
 
@@ -139,120 +283,3 @@ class AddressBook(UserDict):
 
 #     # Видалення запису Jane
 #     book.delete("Jane")
-
-def input_error(func):
-    def inner(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except ValueError as e:
-            return f"Enter the argument for the command: {e}"
-        except KeyError:
-            return "Contact not found."
-        except IndexError:
-            return "Invalid input. Please provide the correct information."
-        except Exception as e:
-            return f"An error occurred: {e}"
-
-    return inner
-
-def parse_input(user_input):
-    cmd, *args = user_input.split()
-    cmd = cmd.strip().lower()
-    return cmd, *args
-
-@input_error
-def add_contact(args, book):
-    if len(args) != 2:
-        raise ValueError("name and phone number.")
-    name, phone = args
-    if name in book.data:
-        record = book.data[name]
-    else:
-        record = Record(name)
-    record.add_phone(phone)
-    book.add_record(record)
-
-    return f"Contact with name {name} added."
-
-@input_error
-def change_contact(args, book):
-    if len(args) != 3:
-        raise ValueError("name, old phone number, new phone number.")
-    name, old_phone, new_phone = args
-    if name not in book:
-        raise KeyError
-    record = book.find(name)
-    record.edit_phone(old_phone, new_phone)
-    return f"Contact with name {name} changed."
-
-@input_error
-def show_phone(args, book):
-    if len(args) != 1:
-        raise ValueError("name.")
-    name = args[0]
-    if name not in book:
-        raise KeyError
-    record = book.find(name)
-    return f"Phones for {name}: {'; '.join(phone.value for phone in record.phones)}"
-
-@input_error
-def show_all(book):
-    if not book:
-        print("No contacts found")
-    for name, record in book.data.items():
-        print(record)
-
-@input_error
-def help():
-    print("\thello - start dialog")
-    print("\tadd <name> <phone> - add contact, require name and phone")
-    print("\tchange <name> <old phone> <new phone> - change contact, require name, old phone and new phone")
-    print("\tphone <name> - show phone, require name")
-    print("\tall - show all contacts")
-    print("\texit or close - exit")
-
-def main():
-    book = AddressBook()
-    print("Welcome to the assistant bot!")
-    while True:
-        user_input = input("Enter a command: ")
-        command, *args = parse_input(user_input)
-
-        if command in ["close", "exit"]:
-            print("Good bye!")
-            break
-        elif command == "hello":
-            print("How can I help you?")
-        elif command == "add":
-            print(add_contact(args, book))
-        elif command == "change":
-            print(change_contact(args, book))
-        elif command == "phone":
-            print(show_phone(args, book))
-        elif command == "all":
-            print(show_all(book))
-        elif command == "help" or "-h":
-            help()
-        else:
-            print("Invalid command.")
-        
-
-if __name__ == "__main__":
-    main()
-    
-# Приклад використання:
-# Welcome to the assistant bot!
-# Enter a command: test
-# Invalid command.
-# Enter a command: hello
-# How can I help you?
-# Enter a command: add Mike 0501111111
-# Contact added
-# Enter a command: change Mike 0502222222
-# Contact changed
-# Enter a command: phone Mike
-# 0502222222
-# Enter a command: all
-# {"Mike":"0502222222"}
-# Enter a command: exit
-# Good bye!
